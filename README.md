@@ -102,7 +102,13 @@ Example response:
 
 ```json
 {"reply":"Hello! How can I help you today?"}
-```
+
+isaac@labs2jobs$ curl -X POST http://localhost:9009/api/chat   -H "Content-Type: application/json"   -d '{"message":"explain briefly about MAI-Code-1.1-Flash"}'
+
+{"reply":"MAI-Code-1.1-Flash is a software framework developed for managing and executing code in embedded systems, particularly those that require efficient memory usage and fast execution. It is part of the MAI (Microcontroller Application Interface) project, which aims to streamline the development process for microcontroller applications.\n\nThe \"Flash\" component typically refers to the use of flash memory for storing code and data, allowing for quicker access and updates compared to traditional storage methods. MAI-Code-1.1-Flash is designed to facilitate the development of applications by providing a structured approach to coding, debugging, and deploying firmware on microcontrollers.\n\nThis framework may include features such as modular design, support for various microcontroller architectures, and tools for testing and optimization, making it a valuable resource for developers working on embedded systems."}
+
+isaac@labs2jobs$
+````
 
 Health check:
 
