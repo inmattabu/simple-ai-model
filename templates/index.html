@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simple Chat Bot</title>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <main class="chat-shell">
+      <header class="topbar">
+        <h1>Simple Chat Bot</h1>
+      </header>
+
+      <section id="chat-window" class="chat-window" aria-live="polite"></section>
+
+      <form id="chat-form" class="chat-form">
+        <label for="message" class="sr-only">Type your message</label>
+        <textarea id="message" rows="3" placeholder="Ask me anything..." required></textarea>
+        <button type="submit">Send</button>
+      </form>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
