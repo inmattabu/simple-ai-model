@@ -55,8 +55,8 @@ pipeline {
                     . .venv/bin/activate
                     pip install --upgrade pip
                     pip install -r requirements.txt
-                    python -m compileall .
-                    python - <<'PY'
+                    python3 -m compileall .
+                    python3 - <<'PY'
 import os
 try:
     import app  # noqa: F401
@@ -83,8 +83,8 @@ HOST=0.0.0.0
 PORT=${CHATBOT_PORT}
 EOF
 
-                        pkill -f "python.*app.py" || true
-                        nohup env $(grep -v '^#' .env | xargs) python app.py > chatbot.log 2>&1 &
+                        pkill -f "python3.*app.py" || true
+                        nohup env $(grep -v '^#' .env | xargs) python3 app.py > chatbot.log 2>&1 &
                         sleep 5
                         curl -fsS "http://127.0.0.1:${CHATBOT_PORT}/health"
                     '''
