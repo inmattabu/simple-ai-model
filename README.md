@@ -66,6 +66,181 @@ source .venv/bin/activate  # Linux/macOS
 pip install -r requirements.txt
 ```
 
+## Manual deployment on the Jenkins server
+
+Use these steps when deploying directly from the Jenkins server at `https://labs2jobs.com:8443`.
+
+### 1) Clone the code onto the server
+
+```bash
+sudo mkdir -p /home/isaac/app/dist
+cd /home/isaac/app/dist
+sudo git clone https://github.com/inmattabu/simple-ai-model.git
+cd simple-ai-model
+```
+
+### 2) Create the environment and install dependencies
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+### 3) Configure runtime environment
+
+Create a `.env` file in the project root and set the required values:
+
+```bash
+cat > .env <<'EOF'
+OPENAI_API_KEY=your_api_key_here
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_BASE_URL=https://api.openai.com/v1
+HOST=0.0.0.0
+PORT=9009
+EOF
+```
+
+> Keep `.env` outside of source control. Jenkins can inject secrets securely via credentials instead of storing them in the repository.
+
+### 4) Start the app on the same server
+
+```bash
+nohup python app.py > chatbot.log 2>&1 &
+```
+
+The app will be available on:
+
+- http://localhost:9009/
+- http://localhost:9009/health
+- http://localhost:9009/api/chat
+
+### 5) Confirm the service is healthy
+
+```bash
+curl http://localhost:9009/health
+```
+
+Example response:
+
+```json
+{"status":"ok","service":"simple-chat-bot"}
+```
+
+## Automated deployment with Jenkins
+
+The Jenkins pipeline is designed to run from the Jenkins server itself, fetch the repository, validate the code, and deploy it on the same machine.
+
+### Jenkins pipeline behavior
+
+The pipeline accepts these parameters:
+
+- `REPOSITORY_URL` — Git repository URL to check out
+- `BRANCH_NAME` — Git branch to build from
+- `SITE_PORT` — public site port exposed by nginx or the front end
+- `CHATBOT_PORT` — backend FastAPI port
+
+The pipeline runs in three stages:
+
+1. Fetch source from the repository to the Jenkins server
+2. Stage and test the project on the server
+3. Deploy the application and restart it on the same host
+
+### Jenkinsfile example
+
+Create a `Jenkinsfile` at the project root. The file should be checked into source control and used by Jenkins to deploy the app automatically.
+
+```groovy
+pipeline {
+    agent any
+
+    parameters {
+        string(name: 'REPOSITORY_URL', defaultValue: 'https://github.com/inmattabu/simple-ai-model/', description: 'Repository URL to deploy')
+        string(name: 'BRANCH_NAME', defaultValue: 'main', description: 'Git branch to deploy')
+        string(name: 'SITE_PORT', defaultValue: '8009', description: 'Public site port')
+        string(name: 'CHATBOT_PORT', defaultValue: '9009', description: 'FastAPI chatbot port')
+    }
+
+    environment {
+        APP_DIR = '/home/isaac/app/dist/simple-ai-model'
+        PYTHON_BIN = '/usr/bin/python3'
+    }
+
+    stages {
+        stage('Fetch Source') {
+            steps {
+                sh '''
+                    set -eux
+                    mkdir -p /home/isaac/app/dist
+                    if [ -d "$APP_DIR/.git" ]; then
+                        cd "$APP_DIR"
+                        git fetch --all --tags
+                        git checkout "$BRANCH_NAME"
+                        git pull --ff-only origin "$BRANCH_NAME"
+                    else
+                        git clone --branch "$BRANCH_NAME" "$REPOSITORY_URL" "$APP_DIR"
+                    fi
+                '''
+            }
+        }
+
+        stage('Stage and Test') {
+            steps {
+                sh '''
+                    set -eux
+                    cd "$APP_DIR"
+                    python3 -m venv .venv
+                    . .venv/bin/activate
+                    pip install --upgrade pip
+                    pip install -r requirements.txt
+                    python -m compileall .
+                    python - <<'PY'
+import os
+try:
+    import app  # noqa: F401
+    print('IMPORT_OK')
+except Exception as exc:
+    print(f'IMPORT_FAILED: {exc}')
+    raise
+PY
+                '''
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                withCredentials([string(credentialsId: 'openai_api_key', variable: 'OPENAI_API_KEY')]) {
+                    sh '''
+                        set -eux
+                        cd "$APP_DIR"
+                        cat > .env <<EOF
+OPENAI_API_KEY=${OPENAI_API_KEY}
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_BASE_URL=https://api.openai.com/v1
+HOST=0.0.0.0
+PORT=${CHATBOT_PORT}
+EOF
+
+                        pkill -f "python.*app.py" || true
+                        nohup env $(cat .env | xargs) python app.py > chatbot.log 2>&1 &
+                        sleep 5
+                        curl -fsS "http://127.0.0.1:${CHATBOT_PORT}/health"
+                    '''
+                }
+            }
+        }
+    }
+}
+```
+
+### Jenkins configuration notes
+
+- Add the repository URL and branch as `Build with Parameters` values in Jenkins.
+- Configure a Jenkins credential named `openai_api_key` for the OpenAI API key.
+- Ensure the Jenkins service account has permission to write to `/home/isaac/app/dist/simple-ai-model`.
+- If nginx is in front of the app, update the site configuration to point to the selected `SITE_PORT` and `CHATBOT_PORT`.
+
 ## Run locally
 
 ```bash
