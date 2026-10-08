@@ -75,6 +75,7 @@ PY
                     sh '''
                         set -eux
                         cd "$APP_DIR"
+                        touch .env 
                         touch chatbot.log
                         cat > .env <<EOF
 OPENAI_API_KEY=${OPENAI_API_KEY}
