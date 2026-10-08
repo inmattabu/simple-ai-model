@@ -76,7 +76,7 @@ PY
                         set -eux
                         cd "$APP_DIR"
                         touch chatbot.log
-                        cat > .env.example <<EOF
+                        cat > .env <<EOF
 OPENAI_API_KEY=${OPENAI_API_KEY}
 OPENAI_MODEL=gpt-4o-mini
 OPENAI_BASE_URL=https://api.openai.com/v1
