@@ -12,12 +12,16 @@ from openai import OpenAI
 from pydantic import BaseModel, Field
 from starlette.middleware.base import BaseHTTPMiddleware
 
+# Load environment variables so secrets and runtime config stay out of the source tree.
 load_dotenv()
 
+# FastAPI application entry point and static/template configuration.
 app = FastAPI(title="Simple Chat Bot", version="1.0.0")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+
+# Basic in-memory rate limiting to reduce API abuse and accidental cost spikes.
 
 RATE_LIMIT_WINDOW_SECONDS = 60
 RATE_LIMIT_MAX_REQUESTS = 30
@@ -28,6 +32,8 @@ MAX_MESSAGE_LENGTH = 2000
 
 class RateLimiter:
     def __init__(self, max_requests: int = RATE_LIMIT_MAX_REQUESTS, window_seconds: int = RATE_LIMIT_WINDOW_SECONDS) -> None:
+        # Keep request tracking in memory only; this is suitable for a small deployment,
+        # but a shared or multi-instance production setup should use a central store.
         self.max_requests = max_requests
         self.window_seconds = window_seconds
         self._requests: dict[str, list[float]] = {}
@@ -35,6 +41,7 @@ class RateLimiter:
     def allow(self, key: str) -> bool:
         now = time.monotonic()
         timestamps = self._requests.setdefault(key, [])
+        # Remove expired timestamps so the counter reflects the current time window.
         timestamps[:] = [ts for ts in timestamps if now - ts < self.window_seconds]
 
         if len(timestamps) >= self.max_requests:
@@ -48,6 +55,7 @@ rate_limiter = RateLimiter()
 
 
 class ChatRequest(BaseModel):
+    # The model input is intentionally limited to reduce abuse and keep prompts predictable.
     message: str = Field(..., min_length=1, max_length=MAX_MESSAGE_LENGTH)
     history: list[dict[str, str]] | None = None
 
@@ -58,6 +66,7 @@ class ChatResponse(BaseModel):
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        # Add defensive browser headers so the app is harder to misuse in a public deployment.
         response = await call_next(request)
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         response.headers["X-Content-Type-Options"] = "nosniff"
@@ -74,6 +83,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 
 
 def sanitize_message(message: str) -> str:
+    # Normalize incoming text before it reaches the model so we reject empty or malformed input.
     normalized = message.strip()
     if not normalized:
         raise HTTPException(status_code=400, detail="Message cannot be empty.")
@@ -85,6 +95,7 @@ def sanitize_message(message: str) -> str:
 
 
 def sanitize_history(history: list[dict[str, Any]] | None) -> list[dict[str, str]]:
+    # Only keep a small, trusted subset of prior chat turns.
     if not history:
         return []
 
@@ -99,6 +110,7 @@ def sanitize_history(history: list[dict[str, Any]] | None) -> list[dict[str, str
         role = item.get("role")
         content = item.get("content")
 
+        # Ignore prompt-poisoning roles such as system or developer and keep only user/assistant turns.
         if role not in {"user", "assistant"}:
             raise ValueError("Only user and assistant roles are allowed in request history.")
         if not isinstance(content, str):
@@ -117,6 +129,8 @@ def sanitize_history(history: list[dict[str, Any]] | None) -> list[dict[str, str
 
 
 def normalize_base_url(raw_base_url: str | None) -> str | None:
+    # Only allow the configured trusted model endpoint(s). This reduces the risk of sending
+    # API keys to a malicious or unexpected upstream service.
     if raw_base_url is None or not raw_base_url.strip():
         return None
 
@@ -144,6 +158,7 @@ def normalize_base_url(raw_base_url: str | None) -> str | None:
 
 
 def get_client() -> OpenAI:
+    # The API key is required for every request and should be injected via environment variables.
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise HTTPException(status_code=500, detail="OPENAI_API_KEY is not configured.")
@@ -156,6 +171,7 @@ def get_client() -> OpenAI:
 
 
 def get_client_ip(request: Request) -> str:
+    # Use the proxy-provided chain when available so the rate limiter can distinguish clients behind nginx.
     forwarded_for = request.headers.get("x-forwarded-for")
     if forwarded_for:
         return forwarded_for.split(",")[0].strip()
@@ -166,6 +182,7 @@ def get_client_ip(request: Request) -> str:
 
 @app.get("/", response_class=HTMLResponse)
 async def index() -> HTMLResponse:
+    # Read the front-end template directly so the landing page remains lightweight and static.
     with open("templates/index.html", "r", encoding="utf-8") as f:
         html = f.read()
     return HTMLResponse(content=html)
@@ -173,11 +190,13 @@ async def index() -> HTMLResponse:
 
 @app.get("/health")
 async def health() -> dict[str, str]:
+    # Health checks must be quick and dependency-free for load balancers and monitoring.
     return {"status": "ok", "service": "simple-chat-bot"}
 
 
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest, http_request: Request) -> ChatResponse:
+    # Enforce a small rate limit before contacting the external LLM provider.
     client_ip = get_client_ip(http_request)
     if not rate_limiter.allow(client_ip):
         raise HTTPException(status_code=429, detail="Too many requests. Please try again later.")
@@ -189,6 +208,7 @@ async def chat(request: ChatRequest, http_request: Request) -> ChatResponse:
 
         sanitized_message = sanitize_message(request.message)
 
+        # Keep the model prompt constrained to a system instruction, prior safe messages, and the latest input.
         messages: list[dict[str, str]] = [
             {"role": "system", "content": "You are a helpful chatbot for labs2jobs.com."}
         ]
@@ -212,6 +232,7 @@ async def chat(request: ChatRequest, http_request: Request) -> ChatResponse:
 
 
 if __name__ == "__main__":
+    # This entry point is used when the app is started directly from the server or Jenkins.
     import uvicorn
 
     host = os.getenv("HOST", "0.0.0.0")

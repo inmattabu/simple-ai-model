@@ -75,7 +75,8 @@ PY
                     sh '''
                         set -eux
                         cd "$APP_DIR"
-                        cat > .env <<EOF
+                        touch chatbot.log
+                        cat > .env.example <<EOF
 OPENAI_API_KEY=${OPENAI_API_KEY}
 OPENAI_MODEL=gpt-4o-mini
 OPENAI_BASE_URL=https://api.openai.com/v1
@@ -83,10 +84,13 @@ HOST=0.0.0.0
 PORT=${CHATBOT_PORT}
 EOF
 
-                        pkill -f "python3.*app.py" || true
-                        nohup env $(grep -v '^#' .env | xargs) python3 app.py > chatbot.log 2>&1 &
+                        if curl -fsS "http://127.0.0.1:${CHATBOT_PORT}/health" >/dev/null 2>&1; then
+                            pkill -f "python3.*app.py" || true
+                        fi
+                        nohup env $(grep -v '^#' .env | xargs) python3 app.py >> chatbot.log 2>&1 &
                         sleep 5
                         curl -fsS "http://127.0.0.1:${CHATBOT_PORT}/health"
+                        echo "Chatbot health check passed on http://127.0.0.1:${CHATBOT_PORT}/health"
                     '''
                 }
             }
