@@ -86,9 +86,14 @@ PORT=${CHATBOT_PORT}
 EOF
 
                         if curl -fsS "http://127.0.0.1:${CHATBOT_PORT}/health" >/dev/null 2>&1; then
-                            pkill -f "python3.*app.py" || true
+                            pkill -f "python3 app.py" || true
                         fi
-                        nohup env $(grep -v '^#' .env | xargs) python3 app.py >> chatbot.log 2>&1 &
+
+                        set -a
+                        . ./.env
+                        set +a
+
+                        nohup python3 app.py >> chatbot.log 2>&1 &
                         sleep 5
                         curl -fsS "http://127.0.0.1:${CHATBOT_PORT}/health"
                         echo "Chatbot health check passed on http://127.0.0.1:${CHATBOT_PORT}/health"
