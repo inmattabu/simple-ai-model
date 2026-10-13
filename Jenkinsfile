@@ -75,17 +75,18 @@ PY
                     sh '''
                         set -eux
                         cd "$APP_DIR"
-                        touch .env 
+                        touch .env
                         touch chatbot.log
+                        export CHATBOT_PORT="${CHATBOT_PORT:-9009}"
                         cat > .env <<EOF
 OPENAI_API_KEY=${OPENAI_API_KEY}
 OPENAI_MODEL=gpt-4o-mini
 OPENAI_BASE_URL=https://api.openai.com/v1
 HOST=0.0.0.0
-PORT=${CHATBOT_PORT}
+PORT=$CHATBOT_PORT
 EOF
 
-                        if curl -fsS "http://127.0.0.1:${CHATBOT_PORT}/health" >/dev/null 2>&1; then
+                        if curl -fsS "http://127.0.0.1:${CHATBOT_PORT:-9009}/health" >/dev/null 2>&1; then
                             pkill -f "python3 app.py" || true
                         fi
 

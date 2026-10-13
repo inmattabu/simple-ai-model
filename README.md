@@ -79,53 +79,83 @@ sudo git clone https://github.com/inmattabu/simple-ai-model.git
 cd simple-ai-model
 ```
 
-### 2) Create the environment and install dependencies
+### 2) Build the application image
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
+sudo podman build -t localhost/simple-chat-bot:latest -f Containerfile .
 ```
+
+The `Containerfile` installs the Python dependencies and copies the application, templates, and static files into the image. The OpenAI key is supplied at runtime and is not baked into the image.
 
 ### 3) Configure runtime environment
 
-Create a `.env` file in the project root and set the required values:
+Create a `.env` file in the project root with the runtime settings:
 
 ```bash
-cat > .env <<'EOF'
+sudo tee .env >/dev/null <<'EOF'
 OPENAI_API_KEY=your_api_key_here
 OPENAI_MODEL=gpt-4o-mini
 OPENAI_BASE_URL=https://api.openai.com/v1
-HOST=0.0.0.0
-PORT=9009
 EOF
+sudo chmod 600 .env
 ```
 
-> Keep `.env` outside of source control. Jenkins can inject secrets securely via credentials instead of storing them in the repository.
+Keep `.env` out of source control. For a non-OpenAI-compatible endpoint, set `OPENAI_BASE_URL` and add that same URL to `OPENAI_ALLOWED_BASE_URLS` so the application accepts it.
 
-### 4) Start the app on the same server
+### 4) Start the container on the same server
 
 ```bash
-nohup python app.py > chatbot.log 2>&1 &
+sudo podman run -d \
+    --name simple-chat-bot \
+    --restart=always \
+    --publish 127.0.0.1:9009:9009 \
+    --env-file .env \
+    localhost/simple-chat-bot:latest
 ```
 
-The app will be available on:
+The app is available on the server at:
 
 - http://localhost:9009/
 - http://localhost:9009/health
 - http://localhost:9009/api/chat
 
+The port is bound to loopback so external traffic continues to go through nginx. On a systemd-based server, enable Podman's restart service to restore containers with `--restart=always` after a reboot:
+
+```bash
+sudo systemctl enable --now podman-restart.service
+```
+
 ### 5) Confirm the service is healthy
 
 ```bash
-curl http://localhost:9009/health
+curl -fsS http://127.0.0.1:9009/health
 ```
 
 Example response:
 
 ```json
 {"status":"ok","service":"simple-chat-bot"}
+```
+
+To inspect container output or restart the app:
+
+```bash
+sudo podman logs simple-chat-bot
+sudo podman restart simple-chat-bot
+```
+
+To deploy a new version, fetch the updated source, rebuild the image, then replace the running container:
+
+```bash
+sudo podman build -t localhost/simple-chat-bot:latest -f Containerfile .
+sudo podman rm -f simple-chat-bot
+sudo podman run -d \
+    --name simple-chat-bot \
+    --restart=always \
+    --publish 127.0.0.1:9009:9009 \
+    --env-file .env \
+    localhost/simple-chat-bot:latest
+curl -fsS http://127.0.0.1:9009/health
 ```
 
 ## Automated deployment with Jenkins

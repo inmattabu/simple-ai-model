@@ -236,5 +236,6 @@ if __name__ == "__main__":
     import uvicorn
 
     host = os.getenv("HOST", "0.0.0.0")
-    port = int(os.getenv("PORT", "9009"))
+    port_value = os.getenv("PORT")
+    port = int(port_value) if port_value and port_value.strip() else 9009
     uvicorn.run("app:app", host=host, port=port, reload=True)
