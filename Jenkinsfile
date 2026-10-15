@@ -9,7 +9,7 @@ pipeline {
         )
         string(
             name: 'BRANCH_NAME',
-            defaultValue: 'main',
+            defaultValue: 'mai',
             description: 'Git branch to deploy'
         )
         string(
