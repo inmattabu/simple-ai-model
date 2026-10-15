@@ -56,6 +56,7 @@ pipeline {
                     pip install --upgrade pip
                     pip install -r requirements.txt
                     python3 -m compileall .
+                    python3 -m compileall app.py
                     python3 - <<'PY'
 import os
 try:
