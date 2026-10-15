@@ -66,6 +66,18 @@ source .venv/bin/activate  # Linux/macOS
 pip install -r requirements.txt
 ```
 
+## Browser tests
+
+Install the development dependencies and Chromium once, then run the tests:
+
+```bash
+pip install -r requirements-dev.txt
+python -m playwright install chromium
+pytest
+```
+
+The Playwright tests start the FastAPI app on a temporary local port and mock `/api/chat`, so they do not require an OpenAI API key or network access to a model provider.
+
 ## Manual deployment on the Jenkins server
 
 Use these steps when deploying directly from the Jenkins server at `https://labs2jobs.com:8443`.
