@@ -24,12 +24,13 @@ The application is configured to run internally on port 9009 and is intended to 
 - `static/app.js` – browser client logic
 - `nginx/chatbot.conf` – nginx config for port 8009 -> 9009
 - `.env.example` – environment variables template
+
+## Browser tests
 - `requirements.txt` – Python dependencies
 
 ## Requirements
 
 - Python 3.11+
-- OpenAI-compatible API key
 - nginx (optional for production)
 
 ## Environment setup
@@ -66,9 +67,12 @@ source .venv/bin/activate  # Linux/macOS
 pip install -r requirements.txt
 ```
 
-## Browser tests
+ `requirements.txt` – Python dependencies
+ `requirements-dev.txt` – test dependencies
+ `tests/test_security.py` – API security tests
+ `tests/test_playwright.py` – browser UI and interaction tests
 
-Install the development dependencies and Chromium once, then run the tests:
+Install the development dependencies and Chromium, then run the suite:
 
 ```bash
 pip install -r requirements-dev.txt
@@ -77,6 +81,7 @@ pytest
 ```
 
 The Playwright tests start the FastAPI app on a temporary local port and mock `/api/chat`, so they do not require an OpenAI API key or network access to a model provider.
+The Playwright tests start the FastAPI app on a temporary local port and mock `/api/chat`, so they do not require an OpenAI API key or network access to a model provider. They cover chat submission and reply rendering, empty and whitespace-only input, keyboard and accessible controls, and desktop/mobile layout. On Linux hosts missing Chromium system libraries, install them with `python -m playwright install --with-deps chromium`; this may require administrator privileges.
 
 ## Manual deployment on the Jenkins server
 
@@ -419,3 +424,108 @@ Stop any running process using port 9009 or change `PORT` in `.env` before resta
 ## Security note
 
 The service account API key should never be committed to the repository. Use environment variables and keep `.env` out of source control.
+
+
+### Installation Steps
+#imatta@labs2jobs:/home/isaac/app/dist/simple-ai-model/tests$ sudo npm init playwright@latest
+#
+#> aisaac-playwright-tests@1.0.0 npx
+#> create-playwright
+#
+#Getting started with writing end-to-end tests with Playwright:
+#Initializing project in '.'
+#✔ Where to put your end-to-end tests? · .
+#✔ Add a GitHub Actions workflow? (Y/n) · true
+#✔ Install Playwright browsers (can be done manually via 'npx playwright install')? (Y/n) · true
+#✔ Install Playwright operating system dependencies (requires sudo / root - can be done manually #via 'sudo npx playwright install-deps')? (y/N) · false
+#Installing Playwright Test (npm install --save-dev @playwright/test)…
+#
+#up to date, audited 152 packages in 2s
+#
+#14 packages are looking for funding
+#  run `npm fund` for details
+#
+#8 high severity vulnerabilities
+#
+#To address all issues, run:
+#  npm audit fix
+#
+# Run `npm audit` for details.
+# ✔ /home/isaac/app/dist/simple-ai-model/tests/playwright.config.ts already exists. Override it? (y/# N) · false
+# ✔ /home/isaac/app/dist/simple-ai-model/tests/.github/workflows/playwright.yml already exists. # Override it? (y/N) · false
+# ✔ /home/isaac/app/dist/simple-ai-model/tests/example.spec.ts already exists. Override it? (y/N) · # false
+# Writing package.json.
+# Downloading browsers (npx playwright install)…
+# Downloading Chrome for Testing 156.0.8078.4 (playwright chromium v1248) from https://cdn.playwright.dev/builds/cft/156.0.8078.4/linux64/chrome-linux64.zip
+# 191.1 MiB [====================] 100% 0.0s
+# Chrome for Testing 156.0.8078.4 (playwright chromium v1248) downloaded to /root/.cache/ms-playwright/chromium-1248
+# Downloading Chrome Headless Shell 156.0.8078.4 (playwright chromium-headless-shell v1248) from https://cdn.playwright.dev/builds/cft/156.0.8078.4/linux64/chrome-headless-shell-linux64.zip
+# 120 MiB [====================] 100% 0.0s
+# Chrome Headless Shell 156.0.8078.4 (playwright chromium-headless-shell v1248) downloaded to /root/.cache/ms-playwright/chromium_headless_shell-1248
+# Downloading Firefox 157.0 (playwright firefox v1555) from https://cdn.playwright.dev/dbazure/download/playwright/builds/firefox/1555/firefox-ubuntu-24.04.zip
+# 111 MiB [====================] 100% 0.0s
+# Firefox 157.0 (playwright firefox v1555) downloaded to /root/.cache/ms-playwright/firefox-1555
+# Downloading WebKit 27.2 (playwright webkit v2370) from https://cdn.playwright.dev/dbazure/download/playwright/builds/webkit/2370/webkit-ubuntu-24.04.zip
+# 103.1 MiB [====================] 100% 0.0s
+# WebKit 27.2 (playwright webkit v2370) downloaded to /root/.cache/ms-playwright/webkit-2370
+# Downloading FFmpeg (playwright ffmpeg v1013) from https://cdn.playwright.dev/dbazure/download/playwright/builds/ffmpeg/1013/ffmpeg-linux.zip
+# 2.2 MiB [====================] 100% 0.0s
+# FFmpeg (playwright ffmpeg v1013) downloaded to /root/.cache/ms-playwright/ffmpeg-1013
+# Playwright Host validation warning:
+╔══════════════════════════════════════════════════════╗
+║ Host system is missing dependencies to run browsers. ║
+║ Please install them with the following command:      ║
+║                                                      ║
+║     npx playwright install-deps                      ║
+║                                                      ║
+║ Alternatively, use apt:                              ║
+║     apt-get install libgtk-4-1\                      ║
+║         libevent-2.1-7t64\                           ║
+║         libgstreamer-plugins-bad1.0-0\               ║
+║         libflite1\                                   ║
+║         libavif16\                                   ║
+║         gstreamer1.0-libav                           ║
+║                                                      ║
+║ <3 Playwright Team                                   ║
+╚══════════════════════════════════════════════════════╝
+#   at validateDependenciesLinux (/home/isaac/app/dist/simple-ai-model/tests/node_modules/playwright-core/lib/coreBundle.js:33605:9)
+#   at async Registry._validateHostRequirements (/home/isaac/app/dist/simple-ai-model/tests/node_modules/playwright-core/lib/coreBundle.js:34866:18)
+#   at async Registry._validateHostRequirementsForExecutableIfNeeded (/home/isaac/app/dist/simple-ai-model/tests/node_modules/playwright-core/lib/coreBundle.js:34988:11)
+#   at async Registry.validateHostRequirementsForExecutablesIfNeeded (/home/isaac/app/dist/simple-ai-model/tests/node_modules/playwright-core/lib/coreBundle.js:34977:11)
+#   at async installBrowsers (/home/isaac/app/dist/simple-ai-model/tests/node_modules/playwright-core/lib/coreBundle.js:72213:5)
+#   at async _Command.<anonymous> (/home/isaac/app/dist/simple-ai-model/tests/node_modules/#playwright-core/lib/coreBundle.js:75877:7)
+#  Success! Created a Playwright Test project at /home/isaac/app/dist/simple-ai-model/tests
+#
+# nside that directory, you can run several commands:
+#
+#  npx playwright test
+#    Runs the end-to-end tests.
+#
+#  npx playwright test --ui
+#    Starts the interactive UI mode.
+#
+#  npx playwright test --project=chromium
+#    Runs the tests only on Desktop Chrome.
+#
+#  npx playwright test example
+#    Runs the tests in a specific file.
+#
+#  npx playwright test --debug
+#    Runs the tests in debug mode.
+#
+#  npx playwright codegen
+#    Auto generate tests with Codegen.
+#
+# e suggest that you begin by typing:
+#
+#    npx playwright test
+#
+# nd check out the following files:
+#  - ./example.spec.ts - Example end-to-end test
+#  - ./playwright.config.ts - Playwright Test configuration
+#
+# isit https://playwright.dev/docs/intro for more information. ✨
+#
+# appy hacking! 🎭
+# matta@labs2jobs:/home/isaac/app/dist/simple-ai-model/tests$
+#

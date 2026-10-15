@@ -54,7 +54,8 @@ pipeline {
                     python3 -m venv .venv
                     . .venv/bin/activate
                     pip install --upgrade pip
-                    pip install -r requirements.txt
+                    pip install -r requirements-dev.txt
+                    python3 -m playwright install --with-deps chromium
                     python3 -m compileall .
                     python3 - <<'PY'
 import os
@@ -65,6 +66,7 @@ except Exception as exc:
     print(f'IMPORT_FAILED: {exc}')
     raise
 PY
+                    python3 -m pytest
                 '''
             }
         }
