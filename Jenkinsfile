@@ -74,7 +74,6 @@ PY
                 withCredentials([string(credentialsId: 'openai_api_key', variable: 'OPENAI_API_KEY')]) {
                     sh '''
                         set -eux
-                        CHATBOT_PORT="${params.CHATBOT_PORT}"
                         cd "$APP_DIR"
                         touch .env 
                         touch chatbot.log
