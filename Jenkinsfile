@@ -25,7 +25,7 @@ pipeline {
     }
 
     environment {
-        APP_DIR = '/home/isaac/app/dist/simple-ai-model'
+        APP_DIR = '/home/anuja/simple-ai-model'
     }
 
     stages {
